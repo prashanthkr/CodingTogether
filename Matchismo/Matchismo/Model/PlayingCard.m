@@ -9,6 +9,27 @@
 #import "PlayingCard.h"
 
 @implementation PlayingCard
+
+//Override the match method from SuperClass Card
+-(int)match:(NSArray *)otherCards
+{
+    int score = 0;
+    //Calling [super match:..] isn't done here as this is independent of what is in the super class
+    
+    //Match a single other card only
+    if(otherCards.count == 1){
+        PlayingCard *otherCard = [otherCards lastObject];//lastObject is similar to [array ObjectAtIndex:array.count-1] and returns nil if array is empty
+        if([otherCard.suit isEqualToString:self.suit]){
+            score = 1;
+        } else if(otherCard.rank == self.rank){
+            score = 4;//there are 12 that match a card's suit, but only 3 that match its rank...that's why we give 4 times more for rank match
+        }
+        
+        
+    }
+    
+    return score;
+}
 -(NSString *)contents
 {
     return [[PlayingCard rankStrings][self.rank] stringByAppendingString:self.suit];
