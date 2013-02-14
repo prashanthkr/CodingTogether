@@ -14,34 +14,13 @@
 @interface CardGameViewController ()
 @property (weak, nonatomic) IBOutlet UILabel *flipsLabel;
 @property (nonatomic) int flipCount;
-//@property (strong, nonatomic) PlayingCardDeck *deck;//view This allocation is now done on the fly in game initializer
 @property (strong, nonatomic) IBOutletCollection(UIButton) NSArray *cardButtons;//view
 @property (strong, nonatomic) CardMatchingGame  *game;//The game model
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
 @end
 
-//new comment test
-
 @implementation CardGameViewController
 
-
-/*
- This allocation is now done on the fly in game initializer
-
-//lazy initialize deck by overriding the getter
--(Deck *)deck{
- //if(_deck == nil){
- //     _deck = [[PlayingCardDeck alloc] init];
- //     for(int i=0; i<53;i++){
- //         Card *card = [[Card alloc] init];
- //         [_deck addCard:card atTop:YES];
- //     }
-     
- //}
-    if(!_deck) _deck = [[PlayingCardDeck alloc] init];
-    return _deck;
-}
-*/
 
 //Lazy instantiation
 -(CardMatchingGame *)game
@@ -55,12 +34,7 @@
 -(void) setCardButtons:(NSArray *)cardButtons
 {
     _cardButtons = cardButtons;
-    /* THIS IS NOW DONE BY THE updateUI FOR CardMatchingGame
-     for(UIButton *cardButton in cardButtons){
-        Card *card = [self.deck drawRandomCard];
-        [cardButton setTitle:card.contents forState:UIControlStateSelected];
-    }
-     */
+
 }
 
 //Updates the UI for every flip
@@ -97,16 +71,9 @@
 }
 
 - (IBAction)flipCard:(UIButton *)sender {
-    //sender.selected = !sender.isSelected;
     //Flipping is now done by the CardMatchingGame
     [self.game flipCardAtIndex:[self.cardButtons indexOfObject:sender]];
     
-    /*NSString *desc = [[self.deck drawRandomCard] description];
-    //NSLog(@"cards size---%d",[[self.deck cards] length]);
-    NSLog(@"cards---%@",[self.deck drawRandomCard]);
-    NSLog(@"card desc---%@",desc);
-    [sender setTitle: desc forState:UIControlStateSelected];
-     */
     self.flipCount++;
     
     //Update the UI whenever the card gets flipped
