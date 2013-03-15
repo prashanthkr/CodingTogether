@@ -23,4 +23,19 @@
 //Public read only, but is privately read-write, defined within interface in the implementation file
 @property (nonatomic,readonly) int score;
 
+//Stores the number of points earned or lost during the last flip ,+ve for match, -ve for no match. 0 if only one card flipped.
+/*@property (nonatomic, readonly) int lastMatchedFlipPoints;
+@property (nonatomic, readonly) int lastUnmatchedFlipPoints;*/
+@property (nonatomic, readonly) int lastFlipPoints;//we only need the total points gained/lost from the last flip
+
+//Store the cards that were flipped...it is 3 for 3 card game, and 2 for 2 card game
+@property (strong, nonatomic, readonly) NSMutableArray *matchingFlippedCards;
+@property (strong, nonatomic, readonly) NSMutableArray *unMatchingFlippedCards;
+
+/*
+@property (nonatomic, readonly) int lastFlipPoints;
+@property (strong, nonatomic, readonly) NSMutableArray *flippedCards;
+
+*/
+
 @end

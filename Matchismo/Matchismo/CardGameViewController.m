@@ -17,6 +17,7 @@
 @property (strong, nonatomic) IBOutletCollection(UIButton) NSArray *cardButtons;//view
 @property (strong, nonatomic) CardMatchingGame  *game;//The game model
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
+@property (weak, nonatomic) IBOutlet UILabel *matchedElementsLabel;
 @end
 
 @implementation CardGameViewController
@@ -61,6 +62,11 @@
         //Update the score
         self.scoreLabel.text = [NSString stringWithFormat:@"Score : %d", self.game.score];
         
+        NSLog(@"matched---%@",[self.game.matchingFlippedCards componentsJoinedByString:@"-"]);
+        NSLog(@"unmatched---%@",[self.game.unMatchingFlippedCards componentsJoinedByString:@"-"]);
+        //Update the matched elements and last flip count
+        self.matchedElementsLabel.text = [NSString stringWithFormat:@"Flipped %@\rMatched %@ \rUnmatched %@  Points:%d",card.contents, [self.game.matchingFlippedCards componentsJoinedByString:@"-"], [self.game.unMatchingFlippedCards componentsJoinedByString:@"-"], self.game.lastFlipPoints];
+        //componentsJoinedByString:@"-"
     }//end for
 }
 
