@@ -16,8 +16,17 @@
     int score = 0;
     //Calling [super match:..] isn't done here as this is independent of what is in the super class
     
-    //Match a single other card only
-    if(otherCards.count == 1){
+    
+    //Now should match any number of cards
+    if(otherCards.count >1){
+        NSRange subArrayRange;
+        subArrayRange.location = 0;//start index
+        subArrayRange.length = otherCards.count-1;
+        
+        //for(Card* otherCard in otherCards){
+        score += [self match:[otherCards subarrayWithRange:subArrayRange]];
+        //}
+    } else if(otherCards.count == 1){
         PlayingCard *otherCard = [otherCards lastObject];//lastObject is similar to [array ObjectAtIndex:array.count-1] and returns nil if array is empty
         if([otherCard.suit isEqualToString:self.suit]){
             score = 1;
