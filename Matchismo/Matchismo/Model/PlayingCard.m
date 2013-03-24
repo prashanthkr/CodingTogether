@@ -21,7 +21,7 @@
     if(otherCards.count >1){
         NSRange subArrayRange;
         subArrayRange.location = 0;//start index
-        subArrayRange.length = otherCards.count-1;
+        subArrayRange.length = otherCards.count-1;//number of elements
         
         //for(Card* otherCard in otherCards){
         score += [self match:[otherCards subarrayWithRange:subArrayRange]];

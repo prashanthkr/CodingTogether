@@ -23,21 +23,28 @@
 @property (weak, nonatomic) IBOutlet UILabel *resultsLabel;
 - (IBAction)startNewGame:(UIButton *)sender;
 
-@property (weak, nonatomic) IBOutlet UISegmentedControl *gameModeButton;
-@property (nonatomic)NSUInteger gameMatchMode;
+@property (strong, nonatomic) IBOutlet UISegmentedControl *gameModeButton;
+@property (nonatomic)NSUInteger gameMatchMode;//default value is 2.
 @end
 
 @implementation CardGameViewController
 
-
-
--(void)setGameModeButton:(UISegmentedControl *)gameModeButton{
-    
+//Lazy initialize gameMatchMode
+-(NSUInteger)gameMatchMode{
+    if(!_gameMatchMode)_gameMatchMode = 2;//default value is 2 if button not clicked
+    return _gameMatchMode;
 }
 
+-(UISegmentedControl*)gameModeButton{
+    if(!_gameModeButton)_gameModeButton = [[UISegmentedControl alloc] init];
+    [_gameModeButton setEnabled:YES forSegmentAtIndex:0];
+    return _gameModeButton;
+
+}
 //Lazy instantiation
 -(CardMatchingGame *)game
 {
+    
     //We are getting the count of card buttons from the view
     if(!_game)_game = [[CardMatchingGame alloc] initWithCardCount:self.cardButtons.count
                                                          usingDeck:[[PlayingCardDeck alloc] init]
@@ -48,7 +55,9 @@
 -(void) setCardButtons:(NSArray *)cardButtons
 {
     _cardButtons = cardButtons;
-
+    for(UIButton * cardButton in _cardButtons){
+        [cardButton setBackgroundImage:[UIImage imageNamed:@"card-back.png"] forState:UIControlStateNormal];
+    }
 }
 
 //Updates the UI for every flip
@@ -60,7 +69,8 @@
         //Set the title for selectedstate. if contents don't change, this will do nothing
         [cardButton setTitle:card.contents forState:UIControlStateSelected];
         
-        //If the card is both selected and disabled, then set the title to teh card's contents
+        //If the card is both selected and disabled, then set the title to the card's contents
+        //[cardButton setImage:nil forState:UIControlStateSelected | UIControlStateDisabled];
         [cardButton setTitle:card.contents forState:UIControlStateSelected|UIControlStateDisabled];
         
         //Card is selected only if it is face up.
@@ -77,14 +87,15 @@
         //NSLog(@"unmatched---%@",[self.game.unMatchingFlippedCards componentsJoinedByString:@"-"]);
         //Update the matched elements and last flip count
         //self.matchedElementsLabel.text = [NSString stringWithFormat:@"Flipped %@\rMatched %@ \rUnmatched %@  Points:%d",card.contents, [self.game.matchingFlippedCards componentsJoinedByString:@"-"], [self.game.unMatchingFlippedCards componentsJoinedByString:@"-"], self.game.lastFlipPoints];
-        
-        
+        [cardButton setBackgroundImage:[UIImage imageNamed:@"white_wall_hash.png"] forState:UIControlStateSelected];
+        [cardButton setBackgroundImage:[UIImage imageNamed:@"white_wall_hash.png"] forState:UIControlStateDisabled];
     }//end for
      //Update the score
     self.scoreLabel.text = [NSString stringWithFormat:@"Score : %d", self.game.score];
     self.flipsLabel.text = [NSString stringWithFormat:@"Flips: %d", self.flipCount];
     //Update the resultString
-    self.resultsLabel.text = [Utility getResultString:self.game.lastFlipPoints forCurrentCardContents:self.game.currentFlippedCard.contents andPreviousCardContents:self.game.previousFlippedCard.contents];
+    //self.resultsLabel.text = [Utility getResultString:self.game.lastFlipPoints forCurrentCardContents:self.game.currentFlippedCard.contents andPreviousCardContents:self.game.previousFlippedCard.contents];
+    self.resultsLabel.text = self.game.resultString;
 
 }//end updateUI
 
@@ -96,31 +107,35 @@
 }
 
 - (IBAction)flipCard:(UIButton *)sender {
+    //As soon as any card is flipped, the game mode control should be disabled
+    [self.gameModeButton setEnabled:NO forSegmentAtIndex:0];
+    [self.gameModeButton setEnabled:NO forSegmentAtIndex:1];
+    
+    
     //Flipping is now done by the CardMatchingGame
     [self.game flipCardAtIndex:[self.cardButtons indexOfObject:sender]];
-    NSLog(@"self.game.previousFlippedCard in controller before setting to current----@%@",self.game.previousFlippedCard.contents);
-    NSLog(@"current flippedcard address in controller before setting to current----@%@",self.game.currentFlippedCard.contents);
+    //NSLog(@"self.game.previousFlippedCard in controller before setting to current----@%@",self.game.previousFlippedCard.contents);
+    //NSLog(@"current flippedcard address in controller before setting to current----@%@",self.game.currentFlippedCard.contents);
     self.flipCount++;
+    
+    //Go through all the flippedcards and remove those that are facedown
+    NSMutableArray* cardsToRemove = [[NSMutableArray alloc] init];
+    for(Card* flippedCard in self.game.allFlippedCards){
+        if(!flippedCard.isFaceUp){
+            [cardsToRemove addObject:flippedCard];
+        }
+    }//end for on allFlippedCards
+    [self.game.allFlippedCards removeObjectsInArray:cardsToRemove];
     
     //Update the UI whenever the card gets flipped
     [self updateUI];
-    //Set the previousFlippedCard only if it isn't the same card flipped twice
-    /*if((self.game.previousFlippedCard != [self.game cardAtIndex:[self.cardButtons indexOfObject:sender]])
-){
-        self.game.previousFlippedCard = [self.game cardAtIndex:[self.cardButtons indexOfObject:sender]];
-    }
-     */
-    if(self.game.previousFlippedCard != self.game.currentFlippedCard ){
-        self.game.previousFlippedCard = self.game.currentFlippedCard;
-        if(self.game.previousFlippedCard.isUnplayable && self.game.currentFlippedCard.isUnplayable){
-            self.game.previousFlippedCard = nil;
-        }//end inner if
-    }
-    NSLog(@"self.game.previousFlippedCard in controller after updating UI----@%@",self.game.previousFlippedCard.contents);
+    
 }
 
 //Switches the game mode between 2 and 3 card matches
 - (IBAction)switchGameMode:(id)sender {
+    //Whenever the game mode is changed, the game has to be reset too
+    self.game = nil;
     NSUInteger selectedIndex = [sender selectedSegmentIndex];
     if(selectedIndex == 0){
         self.gameMatchMode = 2;
@@ -139,6 +154,9 @@
     self.scoreLabel.text=@"Score:0";
     [self updateUI];
     self.resultsLabel.text = @"Welcome!";
+    //Re-enable the gamemode control
+    [self.gameModeButton setEnabled:YES forSegmentAtIndex:0];
+    [self.gameModeButton setEnabled:YES forSegmentAtIndex:1];
 }
 
 

@@ -11,6 +11,15 @@
 @implementation Utility
 //Builds the string for the last flipped card.
 +(NSString *)getResultString:(int)flipPoints
+             forFlippedCards:(NSArray *)flippedCards
+                 andGameMode:(NSUInteger) gameMode{
+    
+    NSRange subArrayRange;
+    //For 2 gameMode, we look at last 2 cards, for 3 gameMode, look at last 3 cards.
+    subArrayRange.location = flippedCards.count > gameMode ? (flippedCards.count-gameMode+1) : 0;//start index.
+    subArrayRange.length = gameMode;//number of elements
+}//end method
+/*+(NSString *)getResultString:(int)flipPoints
       forCurrentCardContents:(NSString *)currentCardContents
      andPreviousCardContents:(NSString *)previousCardContents{
     NSString *resultString;
@@ -26,4 +35,5 @@
     }
     return resultString;
 }
+ */
 @end

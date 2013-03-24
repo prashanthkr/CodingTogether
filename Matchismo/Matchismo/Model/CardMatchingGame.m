@@ -14,8 +14,6 @@
 //Private property to keep track of the cards
 @property (strong, nonatomic) NSMutableArray *cards;
 
-//Private property to keep track of the last flipped cards
-//@property (strong, nonatomic) NSMutableArray *flippedCards;
 
 //Override the score's visibility
 @property (nonatomic) int score;
@@ -28,7 +26,9 @@
 //@property (strong, nonatomic) NSMutableArray *matchingFlippedCards;
 //@property (strong, nonatomic) NSMutableArray *unMatchingFlippedCards;
 @property(nonatomic) NSUInteger gameMode;
+//Private property to keep track of the last flipped cards
 @property (strong, nonatomic) NSMutableArray *allFlippedCards;
+@property (nonatomic) NSString* resultString;
 
 @end
 @implementation CardMatchingGame
@@ -38,6 +38,13 @@
 {
     if(!_cards)_cards = [[NSMutableArray alloc] init];
     return _cards;
+}
+
+//Lazy initialization of the flipped cards
+-(NSMutableArray *)allFlippedCards
+{
+    if(!_allFlippedCards)_allFlippedCards = [[NSMutableArray alloc] init];
+    return _allFlippedCards;
 }
 
 //Lazy initialization of the flipped cards
@@ -85,138 +92,101 @@
 {
     Card *card = [self cardAtIndex:index];
     
+    //Reset for each flip
+    self.resultString = @"";
 //    NSLog(@"self.previousFlippedCard before for----@%@",self.previousFlippedCard.contents);
 //    NSLog(@"card before for----@%@",card.contents);
+//    NSLog(@"flipped cards---%@",self.allFlippedCards);
+//    NSLog(@"gamematch mode---%d",self.gameMode);
+//    self.currentFlippedCard = card;
     
-    self.currentFlippedCard = card;
+    NSMutableArray* cardsToRemove = [[NSMutableArray alloc] init];
     
     //Get the card to flip and make sure it is playable.
     if(!card.isUnplayable){
         //If it is playable, flip the card.
         if(!card.isFaceUp){
             
-            
-            /* NOT NEEDED
-             //If the previousFlippedCard is null, set it to the current card
-            if(!self.previousFlippedCard){
-                self.previousFlippedCard = card;
-            }
-             */
-            //Reset the Array for each flip
-            //self.unMatchingFlippedCards = [[NSMutableArray alloc] init];
-            //self.matchingFlippedCards = [[NSMutableArray alloc] init];
-            
-            //Add the card to the flipped cards array
-            //[self.flippedCards addObject:card];
-            
-            //For every flip, this is reset. But it stays put for all iterations of the deck...
-            //coz there might be 3 cards that are played and all 3 might match, etc...
-            //_lastFlipPoints = 0;//needed to do this if this wasn't overriden in the .m file
-            self.lastFlipPoints = 0;
-            self.currentFlippedCard = card;
-            
-            // This is Breaking ...so going back to loop
-            //If we are matching only against the one previous card that was flipped face up, we don't need to loop through all the faceup cards. Also for the first time, previousFlippedCard is nil and so doesn't match.
-            
             int matchScore = 0;
-            if(self.previousFlippedCard){
-                //At least one card has been flipped before this. So see if it matches current
-                //But check to make sure the same card isn't flipped twice.
-                if(self.previousFlippedCard != card){
-                    matchScore = [card match:@[self.previousFlippedCard]];
-
-                    if(matchScore){
-                        self.previousFlippedCard.unplayable = YES;
-                        card.unplayable = YES;
-                        //self.previousFlippedCard = nil;
-                        self.lastFlipPoints +=  MATCH_BONUS;
-                        self.score +=  MATCH_BONUS;
-                    }else{
-                        self.lastFlipPoints -= MISMATCH_PENALTY;
-                        self.score -= MISMATCH_PENALTY;
-                    }
+            self.lastFlipPoints = 0;
+            NSRange subArrayRange;
+            //For 2 gameMode, we look at last 1 card, for 3 gameMode, look at last 2 cards.
+            subArrayRange.location = self.allFlippedCards.count > self.gameMode ? (self.allFlippedCards.count-self.gameMode+1) : 0;//start index.
+            subArrayRange.length = self.gameMode-1;//number of elements
+            //matchScore = [card match:[self.allFlippedCards subarrayWithRange:subArrayRange]];
+//            NSLog(@"locn---%d", subArrayRange.location);
+//            NSLog(@"length---%d", subArrayRange.length);
+            
+            for(int i = subArrayRange.location; i<self.allFlippedCards.count; i++){
+//                NSLog(@"index of object---%d", i);
+                Card* otherCard = [self.allFlippedCards objectAtIndex:i];
+                matchScore = [card match:@[otherCard]];
+//                NSLog(@"Matchscore---%d", matchScore);
+                if(matchScore){
+                    card.unplayable = YES;
+                    otherCard.unplayable = YES;
+                    self.score += matchScore * MATCH_BONUS;
+                    [cardsToRemove addObject:otherCard];
+                    //Update the lastFlip Count
+                    self.lastFlipPoints += matchScore * MATCH_BONUS;
+                    
                 }else{
-                    //The same card has been flipped twice, so just ignore it.
-                    //Don't put any score either, as we don't want any message if the card is back to facedown.
-                    NSLog(@"Same card flipped twice");
+                    //If mismatch, then the penalty should be applied, and also the array updated
+                    self.lastFlipPoints -= MISMATCH_PENALTY;
+                    self.score -= MISMATCH_PENALTY;
                 }
+            }//end for on allFlippedCards
+            
+            NSMutableArray* cardsConsidered = [[NSMutableArray alloc] init];
+            if(self.allFlippedCards.count >1){
+                [cardsConsidered addObjectsFromArray:[self.allFlippedCards subarrayWithRange:subArrayRange]];
+                [cardsConsidered addObject:card];//add the current card too.
+            }
+            
+             //Delete the matched cards from the flipped cards array
+            [self.allFlippedCards removeObjectsInArray:cardsToRemove];
+            
+            //After the current card matches any one card,dump all the elements in the flippedcards array
+            if(card.unplayable){
+                [self.allFlippedCards removeAllObjects];
+                [cardsToRemove addObject:card];
+            }else{
+                //add the card to the list of flipped cards if it isn't matched
+                [self.allFlippedCards addObject:card];
+            }
+            
+            //Construct the resultString
+            if(cardsToRemove.count >0){
+                //There is at least one match
+                NSString* matches = @"";
+                for(Card * ctr in cardsToRemove){
+                    NSLog(@"%@",ctr.contents);
+                    matches = [[matches stringByAppendingString:ctr.contents] stringByAppendingString:@","];
+                }
+//                NSLog(@"")
+                self.resultString = [NSString stringWithFormat: @"%@ %d %@",[[[self.resultString stringByAppendingString: @"Matched "] stringByAppendingString:matches] stringByAppendingString:@" for "], self.lastFlipPoints, @" points" ];
                 
             }else{
-                //Logic if this is the first card flipped or the card flipped after a match has been found
-                self.lastFlipPoints = 0;
-                NSLog(@"last flipped card is null");
-            }
-            
-            
-            //See if flipping this card up creates a match
-            //Loop through other cards looking for a face up, playable card.
-           /* for(Card *otherCard in self.cards){
-                if(otherCard.isFaceUp
-                   && !otherCard.isUnplayable){
-                   //&& (otherCard == self.previousFlippedCard)){
-                    
-                    //Add the other card also to the flipped cards array
-                    //We only need to maintain one other card...coz we only show the result of last flip
-                    //We only need to store last flip and the current flipped cards
-                    //[self.flippedCards addObject:otherCard ];
-                    
-                    //check to see if this matches
-                    int matchScore = [card match:@[otherCard]];
-                    
-                    
-                    //If it's a match, both cards become unplayable and we up our score
-                    if(matchScore){
-                        //[self.matchingFlippedCards addObject:otherCard.contents ];
-                        otherCard.unplayable = YES;
-                        card.unplayable = YES;
-                        //self.score += matchScore * MATCH_BONUS;
-                        //We also add the otherCard to the flipped cards array and update the lastFlip Count
-                        self.lastFlipPoints += matchScore * MATCH_BONUS;
-                        //Can update the score using last flip points.
-                        //self.score += self.lastFlipPoints;
-                        self.score += matchScore * MATCH_BONUS;
-                    }else{
-                        //Assess a penalty if the card doesn't match
-                        //self.score -= MISMATCH_PENALTY;
-                        // [self.unMatchingFlippedCards addObject:otherCard.contents ];
-                        //If mismatch, then the penalty should be applied, and also the array updated
-                        self.lastFlipPoints -= MISMATCH_PENALTY;
-                        //Can update the score using last flip points.
-                        //self.score -= self.lastFlipPoints;
-                        self.score -= MISMATCH_PENALTY;
-                    }
+                //There's no match
+                NSString* nonMatches = @"";
+                for(Card * nmc in cardsConsidered){
+                    nonMatches = [[nonMatches stringByAppendingString:nmc.contents] stringByAppendingString:@","];
                 }
-            }//end for
-            */
-            
-            //Whether it matches or not, the current card is flipped and for the next flip it will be the previousflippedcard
-            //self.previousFlippedCard = card;
-            
-//            NSLog(@"self.score in model----@%d",self.score);
-            NSLog(@"self.lastflippoints in model----@%d",self.lastFlipPoints);
-//            //NSLog(@"self.previousFlippedCard in model----@%@",self.previousFlippedCard.contents);
-//            NSLog(@"card in model----@%@",card.contents);
-            //NSLog(@"unmatched----@%@",self.unMatchingFlippedCards);
-            //NSLog(@"matched----@%@",self.matchingFlippedCards);
-            
+                self.resultString = [NSString stringWithFormat: @"%@ %d",[[[self.resultString  stringByAppendingString:nonMatches] stringByAppendingString:@" for "]stringByAppendingString: @"don't match "], self.lastFlipPoints ] ;//stringbyAppendingString: @" penalty"];
+            }
             //If the card is not already faceup and is playable, then charge the flip cost
             self.score -= FLIP_COST;
-            //this shoiuld be subtracted from the lastFlipPoints too--no it shouldn't, as the score takes care of this.
-            //self.lastFlipPoints -= FLIP_COST;
-        }else{
-            NSLog(@"self.previousFlippedCard in not faceup----@%@",self.previousFlippedCard.contents);
-            NSLog(@"currentflipcard in notfaceup----@%@",self.currentFlippedCard.contents);
-            //Set the previous flipped card to nil if the card is made facedown and 
-            if((self.previousFlippedCard == self.currentFlippedCard)){
-                self.previousFlippedCard = nil;
-                self.currentFlippedCard = nil;
-                //self.previousFlippedCard.isFaceUp
-            }
+            
+//            //Now add the card to the list of flipped cards if it isn't matched
+//            if(!card.isUnplayable)
+//                [self.allFlippedCards addObject:card];
+            //NSLog(@"flipped cards after adding---%@",self.allFlippedCards);
         }//end check on card faceUp
+
         card.faceUp = !card.isFaceUp;
-        
-        //self.previousFlippedCard = card;
-    }//end flipCardAtIndex
     
-}
+    }//end check on card is playable
+    
+        
+}//end flipCardAtIndex
 @end

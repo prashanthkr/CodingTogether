@@ -9,7 +9,10 @@
 #import <Foundation/Foundation.h>
 
 @interface Utility : NSObject
+//+(NSString *)getResultString:(int)flipPoints
+//      forCurrentCardContents:(NSString *)currentCardContents
+//     andPreviousCardContents:(NSString *)previousCardContents;
 +(NSString *)getResultString:(int)flipPoints
-      forCurrentCardContents:(NSString *)currentCardContents
-     andPreviousCardContents:(NSString *)previousCardContents;
+      forFlippedCards:(NSArray *)flippedCards
+     andGameMode:(NSUInteger) gameMode;
 @end
