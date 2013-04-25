@@ -20,11 +20,7 @@
 
 //Also override the visibility of lastFlipPoints and previousFlippedCard
 @property (nonatomic) int lastFlipPoints;
-//@property(strong, nonatomic) Card* previousFlippedCard;
 @property(strong, nonatomic) Card* currentFlippedCard;
-//@property (strong, nonatomic) NSMutableArray *flippedCards;
-//@property (strong, nonatomic) NSMutableArray *matchingFlippedCards;
-//@property (strong, nonatomic) NSMutableArray *unMatchingFlippedCards;
 @property(nonatomic) NSUInteger gameMode;
 //Private property to keep track of the last flipped cards
 @property (strong, nonatomic) NSMutableArray *allFlippedCards;
@@ -46,13 +42,6 @@
     if(!_allFlippedCards)_allFlippedCards = [[NSMutableArray alloc] init];
     return _allFlippedCards;
 }
-
-//Lazy initialization of the flipped cards
-//-(NSMutableArray *)flippedCards
-//{
-//    if(!_flippedCards)_flippedCards = [[NSMutableArray alloc] init];
-//    return _flippedCards;
-//}
 
 //Designated Initializer
 -(id)initWithCardCount:(NSUInteger)count usingDeck:(Deck *)deck andMatchMode:(NSUInteger)mode
@@ -94,11 +83,6 @@
     
     //Reset for each flip
     self.resultString = @"";
-//    NSLog(@"self.previousFlippedCard before for----@%@",self.previousFlippedCard.contents);
-//    NSLog(@"card before for----@%@",card.contents);
-//    NSLog(@"flipped cards---%@",self.allFlippedCards);
-//    NSLog(@"gamematch mode---%d",self.gameMode);
-//    self.currentFlippedCard = card;
     
     NSMutableArray* cardsToRemove = [[NSMutableArray alloc] init];
     
@@ -107,35 +91,13 @@
         //If it is playable, flip the card.
         if(!card.isFaceUp){
             
-            int matchScore = 0;
+            //int matchScore = 0;
             self.lastFlipPoints = 0;
             NSRange subArrayRange;
             //For 2 gameMode, we look at last 1 card, for 3 gameMode, look at last 2 cards.
             subArrayRange.location = self.allFlippedCards.count > self.gameMode ? (self.allFlippedCards.count-self.gameMode+1) : 0;//start index.
             subArrayRange.length = self.gameMode-1;//number of elements
-            //matchScore = [card match:[self.allFlippedCards subarrayWithRange:subArrayRange]];
-//            NSLog(@"locn---%d", subArrayRange.location);
-//            NSLog(@"length---%d", subArrayRange.length);
-            
-            for(int i = subArrayRange.location; i<self.allFlippedCards.count; i++){
-//                NSLog(@"index of object---%d", i);
-                Card* otherCard = [self.allFlippedCards objectAtIndex:i];
-                matchScore = [card match:@[otherCard]];
-//                NSLog(@"Matchscore---%d", matchScore);
-                if(matchScore){
-                    card.unplayable = YES;
-                    otherCard.unplayable = YES;
-                    self.score += matchScore * MATCH_BONUS;
-                    [cardsToRemove addObject:otherCard];
-                    //Update the lastFlip Count
-                    self.lastFlipPoints += matchScore * MATCH_BONUS;
-                    
-                }else{
-                    //If mismatch, then the penalty should be applied, and also the array updated
-                    self.lastFlipPoints -= MISMATCH_PENALTY;
-                    self.score -= MISMATCH_PENALTY;
-                }
-            }//end for on allFlippedCards
+            cardsToRemove = [self getMatchedCardsWith:card usingStartIndex:subArrayRange.location];
             
             NSMutableArray* cardsConsidered = [[NSMutableArray alloc] init];
             if(self.allFlippedCards.count >1){
@@ -155,32 +117,14 @@
                 [self.allFlippedCards addObject:card];
             }
             
-            //Construct the resultString
-            if(cardsToRemove.count >0){
-                //There is at least one match
-                NSString* matches = @"";
-                for(Card * ctr in cardsToRemove){
-                    NSLog(@"%@",ctr.contents);
-                    matches = [[matches stringByAppendingString:ctr.contents] stringByAppendingString:@","];
-                }
-//                NSLog(@"")
-                self.resultString = [NSString stringWithFormat: @"%@ %d %@",[[[self.resultString stringByAppendingString: @"Matched "] stringByAppendingString:matches] stringByAppendingString:@" for "], self.lastFlipPoints, @" points" ];
-                
-            }else{
-                //There's no match
-                NSString* nonMatches = @"";
-                for(Card * nmc in cardsConsidered){
-                    nonMatches = [[nonMatches stringByAppendingString:nmc.contents] stringByAppendingString:@","];
-                }
-                self.resultString = [NSString stringWithFormat: @"%@ %d",[[[self.resultString  stringByAppendingString:nonMatches] stringByAppendingString:@" for "]stringByAppendingString: @"don't match "], self.lastFlipPoints ] ;//stringbyAppendingString: @" penalty"];
-            }
+            [self constructResultStringWith:cardsToRemove and:cardsConsidered];
+            
             //If the card is not already faceup and is playable, then charge the flip cost
             self.score -= FLIP_COST;
             
 //            //Now add the card to the list of flipped cards if it isn't matched
 //            if(!card.isUnplayable)
 //                [self.allFlippedCards addObject:card];
-            //NSLog(@"flipped cards after adding---%@",self.allFlippedCards);
         }//end check on card faceUp
 
         card.faceUp = !card.isFaceUp;
@@ -189,4 +133,50 @@
     
         
 }//end flipCardAtIndex
+
+-(void) constructResultStringWith: (NSMutableArray*)cardsToRemove and : (NSMutableArray* )cardsConsidered
+{
+    //Construct the resultString
+    if(cardsToRemove.count >0){
+        //There is at least one match
+        NSString* matches = @"";
+        for(Card * ctr in cardsToRemove){
+            matches = [[matches stringByAppendingString:[ctr.contents string]] stringByAppendingString:@","];
+        }
+        self.resultString = [NSString stringWithFormat: @"%@ %d %@",[[[self.resultString stringByAppendingString: @"Matched "] stringByAppendingString:matches] stringByAppendingString:@" for "], self.lastFlipPoints, @" points" ];
+        
+    }else{
+        //There's no match
+        NSString* nonMatches = @"";
+        for(Card * nmc in cardsConsidered){
+            nonMatches = [[nonMatches stringByAppendingString:[nmc.contents string]] stringByAppendingString:@","];
+        }
+        self.resultString = [NSString stringWithFormat: @"%@ %d",[[[self.resultString  stringByAppendingString:nonMatches] stringByAppendingString:@" for "]stringByAppendingString: @"don't match "], self.lastFlipPoints ] ;//stringbyAppendingString: @" penalty"];
+    }
+}//end constructResultString
+
+-(NSMutableArray *)getMatchedCardsWith: (Card*)card usingStartIndex:(NSUInteger)startIndex
+{
+    NSMutableArray* cardsToBeRemoved = [[NSMutableArray alloc] init];
+    for(int i = startIndex; i<self.allFlippedCards.count; i++){
+        //                NSLog(@"index of object---%d", i);
+        Card* otherCard = [self.allFlippedCards objectAtIndex:i];
+        NSUInteger matchScore = [card match:@[otherCard]];
+        if(matchScore){
+            card.unplayable = YES;
+            otherCard.unplayable = YES;
+            self.score += matchScore * MATCH_BONUS;
+            [cardsToBeRemoved addObject:otherCard];
+            //Update the lastFlip Count
+            self.lastFlipPoints += matchScore * MATCH_BONUS;
+            
+        }else{
+            //If mismatch, then the penalty should be applied, and also the array updated
+            self.lastFlipPoints -= MISMATCH_PENALTY;
+            self.score -= MISMATCH_PENALTY;
+        }
+    }//end for on allFlippedCards
+    return cardsToBeRemoved;
+}//end getMatchedCards
+
 @end

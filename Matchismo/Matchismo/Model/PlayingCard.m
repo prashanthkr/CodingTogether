@@ -39,9 +39,10 @@
     
     return score;
 }
--(NSString *)contents
+-(NSAttributedString *)contents
 {
-    return [[PlayingCard rankStrings][self.rank] stringByAppendingString:self.suit];
+    return [[NSAttributedString alloc]
+            initWithString:[[PlayingCard rankStrings][self.rank] stringByAppendingString:self.suit]];
 }
 
 @synthesize suit = _suit;
